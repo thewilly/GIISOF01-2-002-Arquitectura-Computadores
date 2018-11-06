@@ -22,7 +22,7 @@ int main() {
 
 	// IMAGES SETTINGS
 	CImg<float> srcImage1("bailarina.bmp"); // First image
-	CImg<float> srcImage2("figure.png"); // Second image
+	CImg<float> srcImage2("figura.bmp"); // Second image
 
 	// FIRST IMAGE POINTERS
 	float *pRcomp_1, *pGcomp_1, *pBcomp_1; // Pointers to the R, G and B components
@@ -54,7 +54,7 @@ int main() {
 
 	if(srcImage1.height() != srcImage2.height() || srcImage1.width() != srcImage2.width() || srcImage1.spectrum() != srcImage2.spectrum()) {
 		printf("\n Both images must have same dimensions.");
-		//exit(-2);
+		exit(-2);
 	}
 
 	width = srcImage1.width(); // Getting information from the source image
