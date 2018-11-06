@@ -22,7 +22,7 @@ int main() {
 
 	// IMAGES SETTINGS
 	CImg<float> srcImage1("bailarina.bmp"); // First image
-	CImg<float> srcImage2("figure.png"); // Second image
+	CImg<float> srcImage2("figura.bmp"); // Second image
 
 	// FIRST IMAGE POINTERS
 	float *pRcomp_1, *pGcomp_1, *pBcomp_1; // Pointers to the R, G and B components
