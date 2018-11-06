@@ -54,7 +54,7 @@ int main() {
 
 	if(srcImage1.height() != srcImage2.height() || srcImage1.width() != srcImage2.width() || srcImage1.spectrum() != srcImage2.spectrum()) {
 		printf("\n Both images must have same dimensions.");
-		//exit(-2);
+		exit(-2);
 	}
 
 	width = srcImage1.width(); // Getting information from the source image
