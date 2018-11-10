@@ -1,22 +1,18 @@
 /*
  * Main.cpp
  *
- *  Created on: 13 sept. 2018
- *      Author: arias
+ * Authors: Guillermo Facundo Colunga,
+ *      	Álvaro Baños Gómez,
+ *      	Alejandro....,
+ *      	4º integrante.
  */
 
 #include <CImg.h>
 #include <math.h>
 #include <stdio.h>
-using namespace cimg_library;
+#include <stdexcept>
 
-/**********************************
- * TODO
- * 	- Change the data type returned by CImg.srcImage to adjust the
- * 	requirements of your workgroup
- * 	- Change the data type of the components pointers to adjust the
- * 	requirements of your workgroup
- */
+using namespace cimg_library;
 
 int main() {
 
@@ -39,6 +35,7 @@ int main() {
 	// BENCHMARK SETTINGS
 	struct timespec tStart, tEnd;
 	double dElapsedTimeS;
+	const int ALGORITHM_REPETITION_TIMES = 2;
 
 
 	/***************************************************
@@ -53,8 +50,7 @@ int main() {
 	srcImage2.display(); // show the second image.
 
 	if(srcImage1.height() != srcImage2.height() || srcImage1.width() != srcImage2.width() || srcImage1.spectrum() != srcImage2.spectrum()) {
-		printf("\n Both images must have same dimensions.");
-		exit(-2);
+		throw std::domain_error("Both images must have the same size");
 	}
 
 	width = srcImage1.width(); // Getting information from the source image
@@ -69,8 +65,7 @@ int main() {
 	// Allocate memory space for the pixels of the destination (processed) image 
 	pdstImage = (float *) malloc (width * height * nComp * sizeof(float));
 	if (pdstImage == NULL) {
-		printf("\nMemory allocating error\n");
-		exit(-2);
+		throw std::bad_alloc();
 	}
 
 	// Pointers to the RGB arrays of the source image 1
@@ -92,44 +87,59 @@ int main() {
 	 * Algorithm start
 	 *
 	 * Measure initial time
-	 *
-	 *	COMPLETE
-	 *
 	 */
-
-	// Start time measurement
-	clock_gettime(CLOCK_REALTIME, &tStart);
+	if (clock_gettime(CLOCK_REALTIME, &tStart) == -1) {
+		printf("\n clock_gettime: %d.\n", errno);
+		throw std::runtime_error("Error measuring initial time");
+	}
 
 
 	/************************************************
 	 * Algorithm.
-	 * In this example, the algorithm is a components exchange
-	 *
-	 * TO BE REPLACED BY YOUR ALGORITHM
 	 */
+	for(int repetitions = 0; repetitions < ALGORITHM_REPETITION_TIMES; repetitions++) {
+		for (int i = 0; i < height; i++) {
+			for (int j = 0; j < width; j++) {
 
-	for (int i = 0; i < height ; i++) {
-		for (int j=0; j < width; j++)  {
-			pRnew[i * width + j] = sqrtf( pow(pRcomp_1[i * width + j], 2.0f) + pow(pRcomp_2[i * width + j], 2.0f) ) / sqrtf(2.0f);
-			pGnew[i * width + j] = sqrtf( pow(pGcomp_1[i * width + j], 2.0f) + pow(pGcomp_2[i * width + j], 2.0f) ) / sqrtf(2.0f);
-			pBnew[i * width + j] = sqrtf( pow(pBcomp_1[i * width + j], 2.0f) + pow(pBcomp_2[i * width + j], 2.0f) ) / sqrtf(2.0f);
+				// Computing red pixels.
+				pRnew[i * width + j] =
+						sqrtf(
+								pow(pRcomp_1[i * width + j], 2.0f)
+								+ pow(pRcomp_2[i * width + j], 2.0f))
+						/ sqrtf(2.0f);
+
+				// Computing green pixels.
+				pGnew[i * width + j] =
+						sqrtf(
+								pow(pGcomp_1[i * width + j], 2.0f)
+								+ pow(pGcomp_2[i * width + j], 2.0f))
+						/ sqrtf(2.0f);
+
+				// Computing blue pixels.
+				pBnew[i * width + j] =
+						sqrtf(
+								pow(pBcomp_1[i * width + j], 2.0f)
+								+ pow(pBcomp_2[i * width + j], 2.0f))
+						/ sqrtf(2.0f);
+			}
 		}
 	}
-
 	/***********************************************
 	 * End of the algorithm
 	 *
 	 * Measure the final time and calculate the time spent
-	 *
-	 * COMPLETE
-	 *
 	 */
-	// Start time measurement
-	clock_gettime(CLOCK_REALTIME, &tEnd);
+	// End time measurement
+	if (clock_gettime(CLOCK_REALTIME, &tEnd) == -1) {
+		printf("\n clock_gettime: %d.\n", errno);
+		throw std::runtime_error("Error measuring initial time");
+	}
 
 	dElapsedTimeS = (tEnd.tv_sec - tStart.tv_sec);
 	dElapsedTimeS += (tEnd.tv_nsec - tStart.tv_nsec) / 1e+9;
 	printf("\n Tiempo ejecución: %fs", dElapsedTimeS);
+	printf("\n Número de repeticiones: %i", ALGORITHM_REPETITION_TIMES);
+	printf("\n Tiempo individual algoritmo: %fs", (dElapsedTimeS/(float)ALGORITHM_REPETITION_TIMES));
 
 		
 	// Create a new image object with the calculated pixels
@@ -143,5 +153,4 @@ int main() {
 	// Display the destination image
 	dstImage.display(); // If needed, show the result image
 	return(0);
-
 }
