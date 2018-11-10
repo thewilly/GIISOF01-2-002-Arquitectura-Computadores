@@ -1,1 +1,3 @@
-# GIISOF01-2-002-Arquitectura-Computadores
+# Arquitectura de Computadores
+
+Asignatura de arquitectura de computadores en la Universida de Oviedo, Escuela de Ingeniería Informática.
