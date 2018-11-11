@@ -4,7 +4,7 @@
  * Authors: Guillermo Facundo Colunga,
  *      	Álvaro Baños Gómez,
  *      	Alejandro....,
- *      	4º integrante.
+ *      	Iñaki.......
  */
 
 #include <CImg.h>
