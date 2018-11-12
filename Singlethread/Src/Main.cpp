@@ -35,7 +35,10 @@ int main() {
 	// BENCHMARK SETTINGS
 	struct timespec tStart, tEnd;
 	double dElapsedTimeS;
-	const int ALGORITHM_REPETITION_TIMES = 2;
+	const int ALGORITHM_REPETITION_TIMES = 3;
+	
+	// OTHER CONSTANTS
+	const float SQRT2 = sqrtf(2.0f);
 
 
 	/***************************************************
@@ -102,13 +105,13 @@ int main() {
 			for (int j = 0; j < width; j++) {
 
 				// Computing red pixels.
-				pRnew[i * width + j] = sqrtf(pow(pRcomp_1[i * width + j], 2.0f) + pow(pRcomp_2[i * width + j], 2.0f)) / sqrtf(2.0f);
+				pRnew[i * width + j] = sqrtf(pow(pRcomp_1[i * width + j], 2.0f) + pow(pRcomp_2[i * width + j], 2.0f)) / SQRT2;
 
 				// Computing green pixels.
-				pGnew[i * width + j] = sqrtf(pow(pGcomp_1[i * width + j], 2.0f) + pow(pGcomp_2[i * width + j], 2.0f)) / sqrtf(2.0f);
+				pGnew[i * width + j] = sqrtf(pow(pGcomp_1[i * width + j], 2.0f) + pow(pGcomp_2[i * width + j], 2.0f)) / SQRT2;
 
 				// Computing blue pixels.
-				pBnew[i * width + j] = sqrtf(pow(pBcomp_1[i * width + j], 2.0f) + pow(pBcomp_2[i * width + j], 2.0f)) / sqrtf(2.0f);
+				pBnew[i * width + j] = sqrtf(pow(pBcomp_1[i * width + j], 2.0f) + pow(pBcomp_2[i * width + j], 2.0f)) / SQRT2;
 			}
 		}
 	}
