@@ -4,7 +4,7 @@
  * Authors: Guillermo Facundo Colunga,
  *      	Álvaro Baños Gómez,
  *      	Alejandro....,
- *      	Iñaki.......
+ *      	4º integrante.
  */
 
 #include <CImg.h>
@@ -13,6 +13,7 @@
 #include <stdexcept>
 
 using namespace cimg_library;
+
 
 int main() {
 
@@ -29,16 +30,16 @@ int main() {
 	// NEW IMAGE POINTERS AND ATTRIBUTES
 	float *pRnew, *pGnew, *pBnew;
 	float *pdstImage; // Pointer to the new image pixels
-	int width, height; // Width and height of the image
+	int width, height, nPixels; // Width and height of the image
 	int nComp; // Number of image components
 
 	// BENCHMARK SETTINGS
 	struct timespec tStart, tEnd;
 	double dElapsedTimeS;
 	const int ALGORITHM_REPETITION_TIMES = 3;
-	
+
 	// OTHER CONSTANTS
-	const float SQRT2 = sqrtf(2.0f);
+	const float SQRT2 = sqrt(2);
 
 
 	/***************************************************
@@ -63,28 +64,32 @@ int main() {
 				//  B&W images = 1
 				//	Normal color images = 3 (RGB)
 				//  Special color images = 4 (RGB and alpha/transparency channel)
+	nPixels = height*width;
 
+	// PROCESSING THE POINTERS FOR INPUT IMAGES
+
+	// Pointers to the RGB arrays of the source image 1
+	pRcomp_1 = srcImage1.data(); // pRcomp_1 points to the R component
+	pGcomp_1 = pRcomp_1 + nPixels; // pGcomp points to the G component
+	pBcomp_1 = pGcomp_1 + nPixels; // pBcomp points to B component
+
+	// Pointers to the RGB arrays of the source image 2
+	pRcomp_2 = srcImage2.data(); // pRcomp_2 points to the R component
+	pGcomp_2 = pRcomp_2 + nPixels; // pGcomp_2 points to the G component
+	pBcomp_2 = pGcomp_2 + nPixels; // pBcomp_2 points to B component
+
+	// CREATING THE OUTPUT IMAGE AND ITS POINTERS
 
 	// Allocate memory space for the pixels of the destination (processed) image 
 	pdstImage = (float *) malloc (width * height * nComp * sizeof(float));
 	if (pdstImage == NULL) {
-		throw std::bad_alloc();
+	    throw std::bad_alloc();
 	}
-
-	// Pointers to the RGB arrays of the source image 1
-	pRcomp_1 = srcImage1.data(); // pRcomp_1 points to the R component
-	pGcomp_1 = pRcomp_1 + height * width; // pGcomp points to the G component
-	pBcomp_1 = pGcomp_1 + height * width; // pBcomp points to B component
-
-	// Pointers to the RGB arrays of the source image 2
-	pRcomp_2 = srcImage2.data(); // pRcomp_2 points to the R component
-	pGcomp_2 = pRcomp_2 + height * width; // pGcomp_2 points to the G component
-	pBcomp_2 = pGcomp_2 + height * width; // pBcomp_2 points to B component
 
 	// Pointers to the RGB arrays of the destination image
 	pRnew = pdstImage;
-	pGnew = pRnew + height * width;
-	pBnew = pGnew + height * width;
+	pGnew = pRnew + nPixels;
+	pBnew = pGnew + nPixels;
 
 	/*********************************************
 	 * Algorithm start
@@ -101,20 +106,38 @@ int main() {
 	 * Algorithm.
 	 */
 	for(int repetitions = 0; repetitions < ALGORITHM_REPETITION_TIMES; repetitions++) {
-		for (int i = 0; i < height; i++) {
-			for (int j = 0; j < width; j++) {
 
-				// Computing red pixels.
-				pRnew[i * width + j] = sqrtf(pow(pRcomp_1[i * width + j], 2.0f) + pow(pRcomp_2[i * width + j], 2.0f)) / SQRT2;
+	  for (int i = 0; i < nPixels; i++) {
+        *pRnew = sqrtf(pow(*pRcomp_1, 2.0f) + pow(*pRcomp_2, 2.0f)) / SQRT2;
+        *pGnew = sqrtf(pow(*pGcomp_1, 2.0f) + pow(*pGcomp_2, 2.0f)) / SQRT2;
+        *pBnew = sqrtf(pow(*pBcomp_1, 2.0f) + pow(*pBcomp_2, 2.0f)) / SQRT2;
 
-				// Computing green pixels.
-				pGnew[i * width + j] = sqrtf(pow(pGcomp_1[i * width + j], 2.0f) + pow(pGcomp_2[i * width + j], 2.0f)) / SQRT2;
+        pRnew++; pRcomp_1++; pRcomp_2++;
+        pGnew++; pGcomp_1++; pGcomp_2++;
+        pBnew++; pBcomp_1++; pBcomp_2++;
+      }
 
-				// Computing blue pixels.
-				pBnew[i * width + j] = sqrtf(pow(pBcomp_1[i * width + j], 2.0f) + pow(pBcomp_2[i * width + j], 2.0f)) / SQRT2;
-			}
-		}
+	  // RESTORING THE POINTERS FOR NEXT REPETITION.
+
+	  if(repetitions != (ALGORITHM_REPETITION_TIMES-1)) {
+
+        // Pointers to the RGB arrays of the source image 1
+        pRcomp_1 = srcImage1.data(); // pRcomp_1 points to the R component
+        pGcomp_1 = pRcomp_1 + nPixels; // pGcomp points to the G component
+        pBcomp_1 = pGcomp_1 + nPixels; // pBcomp points to B component
+
+        // Pointers to the RGB arrays of the source image 2
+        pRcomp_2 = srcImage2.data(); // pRcomp_2 points to the R component
+        pGcomp_2 = pRcomp_2 + nPixels; // pGcomp_2 points to the G component
+        pBcomp_2 = pGcomp_2 + nPixels; // pBcomp_2 points to B component
+
+        // Pointers to the RGB arrays of the destination image
+        pRnew = pdstImage;
+        pGnew = pRnew + nPixels;
+        pBnew = pGnew + nPixels;
+	  }
 	}
+
 	/***********************************************
 	 * End of the algorithm
 	 *
