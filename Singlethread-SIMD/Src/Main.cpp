@@ -4,7 +4,7 @@
  */
 
 #include <CImg.h>
-#include <immintrin.h> // Required to use intrinsic functions
+#include <immintrin.h>
 #include <malloc.h>
 #include <stdio.h>
 #include <stdexcept>
@@ -12,78 +12,57 @@
 using namespace cimg_library;
 
 #define SIMD_BANDWITH 128
+#define ALGORITHM_REPETITION_TIMES 80
 
 int main() {
-	// IMAGES SETTINGS
+
+	// INPUT IMAGES
 	CImg<float> srcImage1("bailarina.bmp"); // First image
 	CImg<float> srcImage2("figura.bmp"); // Second image
 
-	// FIRST IMAGE POINTERS
-	float *pcompImage1; // Pointer to the pixels of the image 1
-
-	// SECOND IMAGE POINTERS
-	float *pcompImage2; // Pointer to the pixel of image 2
-
-	// NEW IMAGE POINTERS AND ATTRIBUTES
-	float *pdstImage; // Pointer to the new image pixels
-	int width, height; // Width and height of the image
-	int nComp; // Number of image components
-
-	// BENCHMARK SETTINGS
-	struct timespec tStart, tEnd;
-	double dElapsedTimeS;
-	const int ALGORITHM_REPETITION_TIMES = 80;
-
-	// SMID SETTINGS
-	int size = srcImage1._height * srcImage1._width * srcImage1._spectrum;
-	//__m256 a, b, a2, b2, ab2, raizab2, res8;
-
-	__m256 vsqrt2_256;
-	__m128 vsqrt2_128;
-
-	float sqrt2 = sqrtf(2.0f);
-	vsqrt2_256[0] = sqrt2;
-	vsqrt2_256[1] = sqrt2;
-	vsqrt2_256[2] = sqrt2;
-	vsqrt2_256[3] = sqrt2;
-	vsqrt2_256[4] = sqrt2;
-	vsqrt2_256[5] = sqrt2;
-	vsqrt2_256[6] = sqrt2;
-	vsqrt2_256[7] = sqrt2;
-
-	vsqrt2_128[0] = sqrt2;
-	vsqrt2_128[1] = sqrt2;
-	vsqrt2_128[2] = sqrt2;
-	vsqrt2_128[3] = sqrt2;
-
-	srcImage1.display(); // Show the first image.
-	srcImage2.display(); // show the second image.
-
+	// First check that the images can be processed by our program.
 	if (srcImage1.height() != srcImage2.height()
 			|| srcImage1.width() != srcImage2.width()
 			|| srcImage1.spectrum() != srcImage2.spectrum()) {
 		throw std::domain_error("Both images must have the same size");
 	}
 
-	width = srcImage1.width(); // Getting information from the source image
-	height = srcImage1.height();
-	nComp = srcImage1.spectrum(); // source image number of components
-	// Common values for spectrum (number of image components):
-	//  B&W images = 1
-	//	Normal color images = 3 (RGB)
-	//  Special color images = 4 (RGB and alpha/transparency channel)
+	// Second check that the images size is a multiple of SIMD_BANDWITH / sizeOf(float)
 
-	// Allocate memory space for the pixels of the destination (processed) image
-	pdstImage = (float *) malloc(width * height * nComp * sizeof(float));
-	if (pdstImage == NULL) {
+	// Then show the initial images.
+	srcImage1.display(); // Show the first image.
+	srcImage2.display(); // show the second image.
+
+	// IMAGES PROPERTIES
+	const int IMAGES_WIDTH = srcImage1.width();
+	const int IMAGES_HEIGHT = srcImage1.height();
+	const int IMAGES_N_COMPONENTS = srcImage1.spectrum();
+	const int IMAGES_SIZE = IMAGES_WIDTH * IMAGES_HEIGHT * IMAGES_N_COMPONENTS;
+
+	// IMAGE POINTERS
+	float *p_compImage1; // Pointer to the pixels of the input image 1
+	float *p_compImage2; // Pointer to the pixel of input image 2
+	float *p_dstImage; // Pointer to the new image pixels
+
+	// SIMD PROPERTIES
+	const __m128 V_SQRT2 = _mm_set1_ps(sqrtf(2.0f)); // Loading a __m128 vec. with sqrtf(2.0f);
+	const int PACKAGE_DATA_SIZE = SIMD_BANDWITH / (sizeof(float)*CHAR_BIT);
+	__m128 image1, image2;
+
+	// BENCHMARK SETTINGS
+	struct timespec tStart, tEnd;
+	double dElapsedTimeS;
+
+
+	// INITIALIZING POINTERS
+	p_compImage1 = srcImage1.data(); // Pointers to the array of the source image 1
+	p_compImage2 = srcImage2.data(); // Pointers to the array of the source image 2
+	p_dstImage = (float *) malloc(IMAGES_SIZE * sizeof(float)); // Initializing the destination image pointer
+
+	// If the allocation of memory fails...
+	if (p_dstImage == NULL) {
 		throw std::bad_alloc();
 	}
-
-	// Pointers to the array of the source image 1
-	pcompImage1 = srcImage1.data();
-
-	// Pointers to the array of the source image 2
-	pcompImage2 = srcImage2.data();
 
 	/*********************************************
 	 * Algorithm start
@@ -99,59 +78,24 @@ int main() {
 	 * Algorithm.
 	 */
 
-	for (int repetitions = 0; repetitions < ALGORITHM_REPETITION_TIMES;
-			repetitions++) {
-		for (int i = 0; i < size; i += (SIMD_BANDWITH /32)) {
-			/*
-			 P-SEUDOCODE VERSION (NOT TO INCLUDE IN FINAL RELEASE)
+	for (int repetitions = 0; repetitions < ALGORITHM_REPETITION_TIMES; repetitions++) {
+		for (int i = 0; i < IMAGES_SIZE; i += PACKAGE_DATA_SIZE) {
 
-			 a 		= 	_mm256_loadu_ps(&pcompImage1[i]);
-			 b 		= 	_mm256_loadu_ps(&pcompImage2[i]);
-			 a2 		= 	_mm256_mul_ps(a, a);
-			 b2 		= 	_mm256_mul_ps(b, b);
-			 ab2 	= 	_mm256_add_ps(a2, b2);
-			 raizab2 = 	_mm256_sqrt_ps(ab2);
-			 res8 	= 	_mm256_div_ps(raizab2, vsqrt2);
+			image1 = _mm_loadu_ps(&p_compImage1[i]); // loading the first image.
+			image2 = _mm_loadu_ps(&p_compImage2[i]); // loading the second image.
 
-			 _mm256_storeu_ps(&pdstImage[i], res8);
-
-			 */
-
-			if(SIMD_BANDWITH == 256) {
-				_mm256_storeu_ps(&pdstImage[i],
-						_mm256_div_ps(
-								_mm256_sqrt_ps(
-										_mm256_add_ps(
-												_mm256_mul_ps(
-														_mm256_loadu_ps(
-																&pcompImage1[i]),
-														_mm256_loadu_ps(
-																&pcompImage1[i])),
-												_mm256_mul_ps(
-														_mm256_loadu_ps(
-																&pcompImage2[i]),
-														_mm256_loadu_ps(
-																&pcompImage2[i])))),
-								vsqrt2_256));
-			}
-
-			if(SIMD_BANDWITH == 128) {
-				_mm_storeu_ps(&pdstImage[i],
-						_mm_div_ps(
-							_mm_sqrt_ps(
-								_mm_add_ps(
-									_mm_mul_ps(
-										_mm_loadu_ps(
-											&pcompImage1[i]),
-										_mm_loadu_ps(
-											&pcompImage1[i])),
-									_mm_mul_ps(
-										_mm_loadu_ps(
-											&pcompImage2[i]),
-										_mm_loadu_ps(
-											&pcompImage2[i])))),
-								vsqrt2_128));
-			}
+			_mm_storeu_ps( 					// Store
+				&p_dstImage[i],				// At destination image
+				_mm_div_ps(					// The division
+					_mm_sqrt_ps(			// Of the square root
+						_mm_add_ps(			// Of the addition
+							_mm_mul_ps(		// Of the multiplication
+								image1,		// Of the first image
+								image1),	// By the first image
+							_mm_mul_ps(		// And the multiplication
+								image2,		// Of the second image
+								image2))),	// By itself
+					V_SQRT2));				// Finally the division is by the square root of 2.
 		}
 	}
 
@@ -160,27 +104,29 @@ int main() {
 	 *
 	 * Measure the final time and calculate the time spent
 	 */
+
 	// End time measurement
 	if (clock_gettime(CLOCK_REALTIME, &tEnd) < 0) {
 		printf("\n clock_gettime: %d.\n", errno);
 		throw std::runtime_error("Error measuring initial time");
 	}
+
+	// Calculating the spent time
 	dElapsedTimeS = (tEnd.tv_sec - tStart.tv_sec);
 	dElapsedTimeS += (tEnd.tv_nsec - tStart.tv_nsec) / 1e+9;
 	printf("\n Tiempo ejecución: %fs", dElapsedTimeS);
 	printf("\n Número de repeticiones: %i", ALGORITHM_REPETITION_TIMES);
-	printf("\n Tiempo individual algoritmo: %fs",
-			(dElapsedTimeS / (float) ALGORITHM_REPETITION_TIMES));
+	printf("\n Tiempo individual algoritmo: %fs", (dElapsedTimeS / (float) ALGORITHM_REPETITION_TIMES));
 
 	// Create a new image object with the calculated pixels
-	// In case of normal color image use nComp=3,
-	// In case of B&W image use nComp=1.
-	CImg<float> dstImage(pdstImage, width, height, 1, nComp);
+	CImg<float> dstImage(p_dstImage, IMAGES_WIDTH, IMAGES_HEIGHT, 1, IMAGES_N_COMPONENTS);
 
 	// Store the destination image in disk
 	dstImage.save("bailarina3.bmp");
 
 	// Display the destination image
-	dstImage.display(); // If needed, show the result image
+	dstImage.display();
+
+	// Exit
 	return (0);
 }
