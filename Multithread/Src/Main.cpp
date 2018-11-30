@@ -72,7 +72,7 @@ int main() {
 	struct timespec tStart, tEnd;
 	double dElapsedTimeS;
 
-	pthread_t th[8];
+	pthread_t th[NUMBER_OF_THREADS];
 
 	// INITIALIZING POINTERS
 	p_compImage1 = srcImage1.data(); // Pointers to the array of the source image 1
