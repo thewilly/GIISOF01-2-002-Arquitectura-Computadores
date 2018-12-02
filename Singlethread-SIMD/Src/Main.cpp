@@ -13,6 +13,7 @@ using namespace cimg_library;
 
 #define SIMD_BANDWITH 128
 #define ALGORITHM_REPETITION_TIMES 80
+#define EXIT_ERROR exit(-1)
 
 int main() {
 
@@ -25,9 +26,8 @@ int main() {
 			|| srcImage1.width() != srcImage2.width()
 			|| srcImage1.spectrum() != srcImage2.spectrum()) {
 		throw std::domain_error("Both images must have the same size");
+		EXIT_ERROR;
 	}
-
-	// Second check that the images size is a multiple of SIMD_BANDWITH / sizeOf(float)
 
 	// Then show the initial images.
 	srcImage1.display(); // Show the first image.
@@ -46,8 +46,14 @@ int main() {
 
 	// SIMD PROPERTIES
 	const __m128 V_SQRT2 = _mm_set1_ps(sqrtf(2.0f)); // Loading a __m128 vec. with sqrtf(2.0f);
-	const int PACKAGE_DATA_SIZE = SIMD_BANDWITH / (sizeof(float)*CHAR_BIT);
-	__m128 image1, image2;
+	const int PIXELS_PER_DATA_PACKAGE = SIMD_BANDWITH / (sizeof(float)*CHAR_BIT);
+	__m128 dataPackageImage1, dataPackageImage2;
+
+	// Second check that the images size is a multiple of SIMD_BANDWITH / sizeOf(float)
+	if ( IMAGES_SIZE % PIXELS_PER_DATA_PACKAGE != 0) {
+		throw std::domain_error("Those images sizes are not a multiple of %i, therefore cannot be computed in 128bit SIMD", PIXELS_PER_DATA_PACKAGE);
+		EXIT_ERROR;
+	}
 
 	// BENCHMARK SETTINGS
 	struct timespec tStart, tEnd;
@@ -62,6 +68,7 @@ int main() {
 	// If the allocation of memory fails...
 	if (p_dstImage == NULL) {
 		throw std::bad_alloc();
+		EXIT_ERROR;
 	}
 
 	/*********************************************
@@ -72,6 +79,7 @@ int main() {
 	if (clock_gettime(CLOCK_REALTIME, &tStart) < 0) {
 		printf("\n clock_gettime: %d.\n", errno);
 		throw std::runtime_error("Error measuring initial time");
+		EXIT_ERROR;
 	}
 
 	/************************************************
@@ -79,23 +87,23 @@ int main() {
 	 */
 
 	for (int repetitions = 0; repetitions < ALGORITHM_REPETITION_TIMES; repetitions++) {
-		for (int i = 0; i < IMAGES_SIZE; i += PACKAGE_DATA_SIZE) {
+		for (int i = 0; i < IMAGES_SIZE; i += PIXELS_PER_DATA_PACKAGE) {
 
-			image1 = _mm_loadu_ps(&p_compImage1[i]); // loading the first image.
-			image2 = _mm_loadu_ps(&p_compImage2[i]); // loading the second image.
+			dataPackageImage1 = _mm_loadu_ps(&p_compImage1[i]); // loading the first image.
+			dataPackageImage2 = _mm_loadu_ps(&p_compImage2[i]); // loading the second image.
 
-			_mm_storeu_ps( 					// Store
-				&p_dstImage[i],				// At destination image
-				_mm_div_ps(					// The division
-					_mm_sqrt_ps(			// Of the square root
-						_mm_add_ps(			// Of the addition
-							_mm_mul_ps(		// Of the multiplication
-								image1,		// Of the first image
-								image1),	// By the first image
-							_mm_mul_ps(		// And the multiplication
-								image2,		// Of the second image
-								image2))),	// By itself
-					V_SQRT2));				// Finally the division is by the square root of 2.
+			_mm_storeu_ps( 								// Store
+				&p_dstImage[i],							// At destination image
+				_mm_div_ps(								// The division
+					_mm_sqrt_ps(						// Of the square root
+						_mm_add_ps(						// Of the addition
+							_mm_mul_ps(					// Of the multiplication
+								dataPackageImage1,		// Of the first image
+								dataPackageImage1),		// By the first image
+							_mm_mul_ps(					// And the multiplication
+								dataPackageImage2,		// Of the second image
+								dataPackageImage2))),	// By itself
+					V_SQRT2));							// Finally the division is by the square root of 2.
 		}
 	}
 
@@ -109,6 +117,7 @@ int main() {
 	if (clock_gettime(CLOCK_REALTIME, &tEnd) < 0) {
 		printf("\n clock_gettime: %d.\n", errno);
 		throw std::runtime_error("Error measuring initial time");
+		EXIT_ERROR;
 	}
 
 	// Calculating the spent time
