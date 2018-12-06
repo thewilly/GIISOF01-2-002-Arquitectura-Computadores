@@ -12,7 +12,7 @@
 using namespace cimg_library;
 
 #define SIMD_BANDWITH 128
-#define ALGORITHM_REPETITION_TIMES 80
+#define ALGORITHM_REPETITION_TIMES 25
 #define EXIT_ERROR exit(-1)
 
 int main() {
@@ -47,11 +47,18 @@ int main() {
 	// SIMD PROPERTIES
 	const __m128 V_SQRT2 = _mm_set1_ps(sqrtf(2.0f)); // Loading a __m128 vec. with sqrtf(2.0f);
 	const int PIXELS_PER_DATA_PACKAGE = SIMD_BANDWITH / (sizeof(float)*CHAR_BIT);
-	__m128 dataPackageImage1, dataPackageImage2;
+	__m128 dataPackageImage1,
+			dataPackageImage2,
+			squareDP1,
+			squareDP2,
+			productOfSquaresDP12,
+			squarerootDPS,
+			division;
 
 	// Second check that the images size is a multiple of SIMD_BANDWITH / sizeOf(float)
 	if ( IMAGES_SIZE % PIXELS_PER_DATA_PACKAGE != 0) {
-		throw std::domain_error("Those images sizes are not a multiple of %i, therefore cannot be computed in 128bit SIMD", PIXELS_PER_DATA_PACKAGE);
+
+		throw std::domain_error("Those images sizes are not a multiple of the number of threads to use");
 		EXIT_ERROR;
 	}
 
@@ -89,21 +96,26 @@ int main() {
 	for (int repetitions = 0; repetitions < ALGORITHM_REPETITION_TIMES; repetitions++) {
 		for (int i = 0; i < IMAGES_SIZE; i += PIXELS_PER_DATA_PACKAGE) {
 
-			dataPackageImage1 = _mm_loadu_ps(&p_compImage1[i]); // loading the first image.
-			dataPackageImage2 = _mm_loadu_ps(&p_compImage2[i]); // loading the second image.
+			// Loading input images.
+			dataPackageImage1 = _mm_loadu_ps(&p_compImage1[i]);
+			dataPackageImage2 = _mm_loadu_ps(&p_compImage2[i]);
 
-			_mm_storeu_ps( 								// Store
-				&p_dstImage[i],							// At destination image
-				_mm_div_ps(								// The division
-					_mm_sqrt_ps(						// Of the square root
-						_mm_add_ps(						// Of the addition
-							_mm_mul_ps(					// Of the multiplication
-								dataPackageImage1,		// Of the first image
-								dataPackageImage1),		// By the first image
-							_mm_mul_ps(					// And the multiplication
-								dataPackageImage2,		// Of the second image
-								dataPackageImage2))),	// By itself
-					V_SQRT2));							// Finally the division is by the square root of 2.
+			// Computing the squares.
+			squareDP1 = _mm_mul_ps(dataPackageImage1, dataPackageImage1);
+			squareDP2 = _mm_mul_ps(dataPackageImage2, dataPackageImage2);
+
+			// Multiplying the squares.
+			productOfSquaresDP12 = _mm_add_ps(squareDP1, squareDP2);
+
+			// Computing the square root of the multiplication of the squares.
+			squarerootDPS = _mm_sqrt_ps(productOfSquaresDP12);
+
+			// Computing the division of the squarerootDPS over the square root of 2.
+			division = _mm_div_ps(squarerootDPS, V_SQRT2);
+
+			// Storing the result on to the destination image information vector.
+			_mm_storeu_ps(&p_dstImage[i], division);
+
 		}
 	}
 
