@@ -1,9 +1,12 @@
 /*
  * Main.cpp
  *
- *  Created on: 09/10/2018
- *      Author: student
+ * Authors: Álvaro Baños Gómez - UO245852,
+ * 			Guillermo Facundo Colunga - UO236856,
+ *      	Alejandro León Pereira - UO258774,
+ *      	Iñaki Salgado Uralde - UO237133.
  */
+
 #include <CImg.h>
 #include <math.h>
 #include <stdio.h>
@@ -20,6 +23,11 @@ using namespace cimg_library;
 const int NUMBER_OF_THREADS = NUMBER_OF_CORES * THREADS_PER_CORE;
 const float SQRT2 = sqrt(2);
 
+/**
+ * Information struct for the worker, it contains the pointers to the images,
+ * the start position to apply the algorithm and the end position where it
+ * will stop applying the algorithm.
+ */
 struct WorkerInfo {
 	float *p_vimg1;
 	float *p_vimg2;
@@ -28,20 +36,22 @@ struct WorkerInfo {
 	int endPos;
 };
 
-float fusionFunction(float pixel1, float pixel2) {
-	return sqrtf(pow(pixel1, 2.0f) + pow(pixel2, 2.0f)) / SQRT2;
-}
-
-void *worker(void* taskInfo) {
-	struct WorkerInfo *wi = (struct WorkerInfo*) taskInfo;
+/**
+ * A worker it is a thread that will apply the transformation function over the
+ * specified information in the workerInfo.
+ */
+void *worker(void* workerInfo) {
+	struct WorkerInfo *wi = (struct WorkerInfo*) workerInfo;
 
 	for(int i = wi->startPos; i < wi->endPos; i++) {
-		wi->p_vimgres[i] = fusionFunction(wi->p_vimg1[i], wi->p_vimg2[i]);
+		wi->p_vimgres[i] = sqrtf(pow(wi->p_vimg1[i], 2.0f) + pow(wi->p_vimg2[i], 2.0f)) / SQRT2;
 	}
+
 	return wi;
 }
 
 int main() {
+
 	// INPUT IMAGES
 	CImg<float> srcImage1("bailarina.bmp"); // First image
 	CImg<float> srcImage2("figura.bmp"); // Second image
@@ -62,6 +72,11 @@ int main() {
 	const int IMAGES_HEIGHT = srcImage1.height();
 	const int IMAGES_N_COMPONENTS = srcImage1.spectrum();
 	const int IMAGES_SIZE = IMAGES_WIDTH * IMAGES_HEIGHT * IMAGES_N_COMPONENTS;
+
+	// Check images sizes are multiple of the number of threads...
+	if (IMAGES_SIZE % NUMBER_OF_THREADS != 0) {
+		throw std::domain_error("Not proper size of image for this program");
+	}
 
 	// IMAGE POINTERS
 	float *p_compImage1; // Pointer to the pixels of the input image 1
@@ -84,21 +99,17 @@ int main() {
 		throw std::bad_alloc();
 	}
 
-	/*********************************************
-	 * Algorithm start
-	 *
-	 * Measure initial time
-	 */
+	// Measure initial time
 	if (clock_gettime(CLOCK_REALTIME, &tStart) < 0) {
 		printf("\n clock_gettime: %d.\n", errno);
 		throw std::runtime_error("Error measuring initial time");
 
 	}
 
-	/************************************************
-	 * Algorithm.
-	 */
 	for (int repetitions = 0; repetitions < ALGORITHM_REPETITION_TIMES; repetitions++) {
+
+		// ---- ALGORITHM STARTS ----
+
 		for(int n_thread = 0; n_thread < NUMBER_OF_THREADS; n_thread++) {
 			struct WorkerInfo *wi = (struct WorkerInfo*)malloc(sizeof(*wi));
 			wi->startPos = n_thread * (IMAGES_SIZE/NUMBER_OF_THREADS);
@@ -107,19 +118,17 @@ int main() {
 			wi->p_vimg2 = p_compImage2;
 			wi->p_vimgres = p_dstImage;
 
+			// Creating all the threads.
 			pthread_create(&th[n_thread], NULL, worker, ( void* )wi);
 		}
 
+		// Waiting for all the threads to end.
 		for(int n_thread = 0; n_thread < NUMBER_OF_THREADS; n_thread++) {
 			pthread_join(th[n_thread], NULL);
 		}
-	}
 
-	/***********************************************
-	 * End of the algorithm
-	 *
-	 * Measure the final time and calculate the time spent
-	 */
+		// ---- ALGORITHM ENDS ----
+	}
 
 	// End time measurement
 	if (clock_gettime(CLOCK_REALTIME, &tEnd) < 0) {
@@ -135,7 +144,6 @@ int main() {
 	printf("\n Número de repeticiones: %i", ALGORITHM_REPETITION_TIMES);
 	printf("\n Tiempo individual algoritmo: %fs",
 			(dElapsedTimeS / (float) ALGORITHM_REPETITION_TIMES));
-	printf("\n Se han empleado %d cores.", NUMBER_OF_CORES);
 	printf("\n Se han empleado %d threads.", NUMBER_OF_THREADS);
 
 	// Create a new image object with the calculated pixels
@@ -150,5 +158,4 @@ int main() {
 
 	// Exit
 	return (0);
-
 }
