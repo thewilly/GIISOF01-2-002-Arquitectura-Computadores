@@ -1,6 +1,10 @@
 /*
- *  Created on: 6 oct. 2018
- *      Author:
+ * Main.cpp
+ *
+ * Authors: Álvaro Baños Gómez - UO245852,
+ * 			Guillermo Facundo Colunga - UO236856,
+ *      	Alejandro León Pereira - UO258774,
+ *      	Iñaki Salgado Uralde - UO237133.
  */
 
 #include <CImg.h>
@@ -13,7 +17,6 @@ using namespace cimg_library;
 
 #define SIMD_BANDWITH 128
 #define ALGORITHM_REPETITION_TIMES 25
-#define EXIT_ERROR exit(-1)
 
 int main() {
 
@@ -26,7 +29,6 @@ int main() {
 			|| srcImage1.width() != srcImage2.width()
 			|| srcImage1.spectrum() != srcImage2.spectrum()) {
 		throw std::domain_error("Both images must have the same size");
-		EXIT_ERROR;
 	}
 
 	// Then show the initial images.
@@ -47,25 +49,22 @@ int main() {
 	// SIMD PROPERTIES
 	const __m128 V_SQRT2 = _mm_set1_ps(sqrtf(2.0f)); // Loading a __m128 vec. with sqrtf(2.0f);
 	const int PIXELS_PER_DATA_PACKAGE = SIMD_BANDWITH / (sizeof(float)*CHAR_BIT);
-	__m128 dataPackageImage1,
-			dataPackageImage2,
-			squareDP1,
-			squareDP2,
-			productOfSquaresDP12,
-			squarerootDPS,
-			division;
+	__m128 dataPackageImage1;
+	__m128 dataPackageImage2;
+	__m128 squareDP1;
+	__m128 squareDP2;
+	__m128 productOfSquaresDP12;
+	__m128 squarerootDPS;
+	__m128 division;
 
 	// Second check that the images size is a multiple of SIMD_BANDWITH / sizeOf(float)
 	if ( IMAGES_SIZE % PIXELS_PER_DATA_PACKAGE != 0) {
-
 		throw std::domain_error("Those images sizes are not a multiple of the number of threads to use");
-		EXIT_ERROR;
 	}
 
 	// BENCHMARK SETTINGS
 	struct timespec tStart, tEnd;
 	double dElapsedTimeS;
-
 
 	// INITIALIZING POINTERS
 	p_compImage1 = srcImage1.data(); // Pointers to the array of the source image 1
@@ -75,7 +74,6 @@ int main() {
 	// If the allocation of memory fails...
 	if (p_dstImage == NULL) {
 		throw std::bad_alloc();
-		EXIT_ERROR;
 	}
 
 	/*********************************************
@@ -86,14 +84,13 @@ int main() {
 	if (clock_gettime(CLOCK_REALTIME, &tStart) < 0) {
 		printf("\n clock_gettime: %d.\n", errno);
 		throw std::runtime_error("Error measuring initial time");
-		EXIT_ERROR;
 	}
 
-	/************************************************
-	 * Algorithm.
-	 */
 
 	for (int repetitions = 0; repetitions < ALGORITHM_REPETITION_TIMES; repetitions++) {
+
+		// ---- ALGORITHM STARTS ----
+
 		for (int i = 0; i < IMAGES_SIZE; i += PIXELS_PER_DATA_PACKAGE) {
 
 			// Loading input images.
@@ -117,6 +114,8 @@ int main() {
 			_mm_storeu_ps(&p_dstImage[i], division);
 
 		}
+
+		// ---- ALGORITHM ENDS ----
 	}
 
 	/***********************************************
@@ -129,7 +128,6 @@ int main() {
 	if (clock_gettime(CLOCK_REALTIME, &tEnd) < 0) {
 		printf("\n clock_gettime: %d.\n", errno);
 		throw std::runtime_error("Error measuring initial time");
-		EXIT_ERROR;
 	}
 
 	// Calculating the spent time
