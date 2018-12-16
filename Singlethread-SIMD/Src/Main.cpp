@@ -53,7 +53,7 @@ int main() {
 	__m128 dataPackageImage2;
 	__m128 squareDP1;
 	__m128 squareDP2;
-	__m128 productOfSquaresDP12;
+	__m128 additionOfSquaresDP12;
 	__m128 squarerootDPS;
 	__m128 division;
 
@@ -101,11 +101,11 @@ int main() {
 			squareDP1 = _mm_mul_ps(dataPackageImage1, dataPackageImage1);
 			squareDP2 = _mm_mul_ps(dataPackageImage2, dataPackageImage2);
 
-			// Multiplying the squares.
-			productOfSquaresDP12 = _mm_add_ps(squareDP1, squareDP2);
+			// Addition of the squares.
+			additionOfSquaresDP12 = _mm_add_ps(squareDP1, squareDP2);
 
-			// Computing the square root of the multiplication of the squares.
-			squarerootDPS = _mm_sqrt_ps(productOfSquaresDP12);
+			// Computing the square root of the addition of the squares.
+			squarerootDPS = _mm_sqrt_ps(additionOfSquaresDP12);
 
 			// Computing the division of the squarerootDPS over the square root of 2.
 			division = _mm_div_ps(squarerootDPS, V_SQRT2);
