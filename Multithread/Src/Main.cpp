@@ -16,7 +16,7 @@
 
 using namespace cimg_library;
 
-#define ALGORITHM_REPETITION_TIMES 80
+#define ALGORITHM_REPETITION_TIMES 25
 #define NUMBER_OF_CORES 4
 #define THREADS_PER_CORE 2
 
@@ -83,11 +83,13 @@ int main() {
 	float *p_compImage2; // Pointer to the pixel of input image 2
 	float *p_dstImage; // Pointer to the new image pixels
 
+	// THREADS SETTINGS
+	const int PIXELS_PER_THREAD = IMAGES_SIZE/NUMBER_OF_THREADS;
+	pthread_t th[NUMBER_OF_THREADS];
+
 	// BENCHMARK SETTINGS
 	struct timespec tStart, tEnd;
 	double dElapsedTimeS;
-
-	pthread_t th[NUMBER_OF_THREADS];
 
 	// INITIALIZING POINTERS
 	p_compImage1 = srcImage1.data(); // Pointers to the array of the source image 1
@@ -111,15 +113,14 @@ int main() {
 		// ---- ALGORITHM STARTS ----
 
 		for(int n_thread = 0; n_thread < NUMBER_OF_THREADS; n_thread++) {
-			struct WorkerInfo *wi = (struct WorkerInfo*)malloc(sizeof(*wi));
-			wi->startPos = n_thread * (IMAGES_SIZE/NUMBER_OF_THREADS);
-			wi->endPos = (n_thread+1) * (IMAGES_SIZE/NUMBER_OF_THREADS);
+			struct WorkerInfo *wi = (struct WorkerInfo*) malloc(sizeof(*wi));
+			wi->startPos = n_thread * PIXELS_PER_THREAD;
+			wi->endPos = wi->startPos + PIXELS_PER_THREAD;
 			wi->p_vimg1 = p_compImage1;
 			wi->p_vimg2 = p_compImage2;
 			wi->p_vimgres = p_dstImage;
 
-			// Creating all the threads.
-			pthread_create(&th[n_thread], NULL, worker, ( void* )wi);
+			pthread_create(&th[n_thread], NULL, worker, ( void* ) wi);
 		}
 
 		// Waiting for all the threads to end.
@@ -140,6 +141,8 @@ int main() {
 	// Calculating the spent time
 	dElapsedTimeS = (tEnd.tv_sec - tStart.tv_sec);
 	dElapsedTimeS += (tEnd.tv_nsec - tStart.tv_nsec) / 1e+9;
+
+
 	printf("\n Tiempo ejecución: %fs", dElapsedTimeS);
 	printf("\n Número de repeticiones: %i", ALGORITHM_REPETITION_TIMES);
 	printf("\n Tiempo individual algoritmo: %fs",
