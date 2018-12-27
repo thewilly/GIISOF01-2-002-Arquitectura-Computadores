@@ -1,3 +1,3 @@
-# Arquitectura de Computadores
+# High performance images fusion algorithm
 
-Asignatura de arquitectura de computadores en la Universida de Oviedo, Escuela de Ingeniería Informática.
+High performance images fusion algorithm implemented in C++. Athe the notebooks folder you will find the papers related to each version of the algorithm.
